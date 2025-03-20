@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Dog Boarding Calculator</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 600px;
+            margin: 20px auto;
+            padding: 20px;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+        }
+    </style>
+</head>
+<body>
+    <h2>Dog Boarding Cost Calculator</h2>
+    
+    <div class="form-group">
+        <label>Are you a member?</label>
+        <select id="member">
+            <option value="no">No</option>
+            <option value="yes">Yes</option>
+        </select>
+    </div>
+
+    <div class="form-group">
+        <label>Number of pets (1-5):</label>
+        <input type="number" id="numPets" min="1" max="5" value="1">
+    </div>
+
+    <div class="form-group">
+        <label>Duration in days (1-35):</label>
+        <input type="number" id="duration" min="1" max="35" value="1">
+    </div>
+
+    <div class="form-group">
+        <label>Room arrangement:</label>
+        <select id="roomType">
+            <option value="separate">Separate Rooms</option>
+            <option value="shared">Shared Room</option>
+        </select>
+    </div>
+
+    <div class="form-group">
+        <label>Stay type:</label>
+        <select id="stayType">
+            <option value="56">Bark ‘n’ Bunk Dormitory ($56)</option>
+            <option value="80">Junior Suite ($80)</option>
+            <option value="105">Grand Suite ($105)</option>
+            <option value="126">Royal Suite ($126)</option>
+        </select>
+    </div>
+
+    <button onclick="calculateCost()">Calculate Cost</button>
+    
+    <div id="result" style="margin-top: 20px;"></div>
+
+    <script>
+        function calculateCost() {
+            // Get input values
+            const isMember = document.getElementById('member').value === 'yes';
+            const numPets = parseInt(document.getElementById('numPets').value);
+            const duration = parseInt(document.getElementById('duration').value);
+            const roomType = document.getElementById('roomType').value;
+            const baseRate = parseFloat(document.getElementById('stayType').value);
+
+            // Calculate total base cost for all pets
+            const totalBaseCost = baseRate * numPets * duration;
+            
+            // Calculate extra pet base cost (for multi-pet discount calculation)
+            const extraPetBaseCost = numPets > 1 ? baseRate * (numPets - 1) * duration : 0;
+
+            // Calculate possible discounts
+            // 1. Stay discount (applies to all pets)
+            let stayDiscount = 0;
+            let stayDiscountType = '';
+            if (duration >= 30) {
+                stayDiscount = totalBaseCost * 0.20;
+                stayDiscountType = '20% Extended Stay (30+ nights)';
+            } else if (duration >= 7) {
+                stayDiscount = totalBaseCost * 0.10;
+                stayDiscountType = '10% Extended Stay (7+ nights)';
+            }
+
+            // 2. Multi-pet discount (applies only to extra pets)
+            let multiPetDiscount = 0;
+            let multiPetDiscountType = '';
+            if (numPets > 1) {
+                multiPetDiscount = extraPetBaseCost * (roomType === 'separate' ? 0.10 : 0.20);
+                multiPetDiscountType = roomType === 'separate' ? 
+                    '10% Multi-Pet (Separate)' : 
+                    '20% Multi-Pet (Shared)';
+            }
+
+            // Choose larger discount
+            let finalCost = totalBaseCost;
+            let appliedDiscount = 0;
+            let discountType = '';
+            
+            if (stayDiscount > multiPetDiscount) {
+                appliedDiscount = stayDiscount;
+                discountType = stayDiscountType;
+                finalCost = totalBaseCost - stayDiscount;
+            } else if (multiPetDiscount > 0) {
+                appliedDiscount = multiPetDiscount;
+                discountType = multiPetDiscountType;
+                finalCost = totalBaseCost - multiPetDiscount;
+            }
+
+            // Apply member discount if applicable
+            let memberDiscount = 0;
+            if (isMember) {
+                memberDiscount = finalCost * 0.05;
+                finalCost *= 0.95;
+            }
+
+            // Display result
+            const resultDiv = document.getElementById('result');
+            resultDiv.innerHTML = `
+                <h3>Cost Breakdown:</h3>
+                <p>Total Base Cost (${numPets} pet${numPets > 1 ? 's' : ''}): $${totalBaseCost.toFixed(2)}</p>
+                ${appliedDiscount > 0 ? `<p>${discountType} Discount: -$${appliedDiscount.toFixed(2)}</p>` : ''}
+                ${isMember ? `<p>Member 5% Discount: -$${memberDiscount.toFixed(2)}</p>` : ''}
+                <p><strong>Total Cost: $${finalCost.toFixed(2)}</strong></p>
+            `;
+        }
+    </script>
+</body>
+</html>
