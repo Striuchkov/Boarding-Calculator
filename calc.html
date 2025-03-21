@@ -54,10 +54,12 @@
 
     <div class="info-box">
       <p>
-        <strong>Family Booking:</strong> This calculator allows you to book up
-        to three different room types for your pets. Multi-pet discounts apply
-        to all additional pets after the first pet, regardless of which room
-        they're in.
+        <strong>Family Booking:</strong> This calculator allows you to make multiple bookings for your pets.
+        The first pet in your family pays full price, while additional pets receive discounts:
+        <ul>
+          <li>10% discount for additional pets in their own separate rooms</li>
+          <li>20% discount for additional pets sharing a room (applies only to 2nd+ pet in the same room)</li>
+        </ul>
       </p>
     </div>
 
@@ -71,7 +73,7 @@
 
     <!-- Booking 1 -->
     <div class="booking-section">
-      <h3 class="booking-title">Room 1</h3>
+      <h3 class="booking-title">Booking 1</h3>
       <div class="form-group">
         <label>Number of pets (1-5):</label>
         <input type="number" id="numPets1" min="1" max="5" value="1" />
@@ -83,15 +85,15 @@
       </div>
 
       <div class="form-group">
-        <label>Room arrangement:</label>
+        <label>Accommodation arrangement:</label>
         <select id="roomType1">
-          <option value="separate">Separate Rooms</option>
-          <option value="shared">Shared Room</option>
+          <option value="separate">Each Pet in Own Room</option>
+          <option value="shared">Pets Sharing One Room</option>
         </select>
       </div>
 
       <div class="form-group">
-        <label>Stay type:</label>
+        <label>Room type:</label>
         <select id="stayType1">
           <option value="56">Bark 'n' Bunk Dormitory ($56)</option>
           <option value="80">Junior Suite ($80)</option>
@@ -103,14 +105,14 @@
 
     <!-- Booking 2 -->
     <div class="booking-section">
-      <h3 class="booking-title">Room 2 (Optional)</h3>
+      <h3 class="booking-title">Booking 2 (Optional)</h3>
       <div class="form-group">
         <input
           type="checkbox"
           id="enableBooking2"
           onchange="toggleBookingSection(2)"
         />
-        <label for="enableBooking2" style="display: inline">Add Room 2</label>
+        <label for="enableBooking2" style="display: inline">Add Booking 2</label>
       </div>
 
       <div id="booking2Fields" style="display: none">
@@ -125,15 +127,15 @@
         </div>
 
         <div class="form-group">
-          <label>Room arrangement:</label>
+          <label>Accommodation arrangement:</label>
           <select id="roomType2">
-            <option value="separate">Separate Rooms</option>
-            <option value="shared">Shared Room</option>
+            <option value="separate">Each Pet in Own Room</option>
+            <option value="shared">Pets Sharing One Room</option>
           </select>
         </div>
 
         <div class="form-group">
-          <label>Stay type:</label>
+          <label>Room type:</label>
           <select id="stayType2">
             <option value="56">Bark 'n' Bunk Dormitory ($56)</option>
             <option value="80">Junior Suite ($80)</option>
@@ -146,14 +148,14 @@
 
     <!-- Booking 3 -->
     <div class="booking-section">
-      <h3 class="booking-title">Room 3 (Optional)</h3>
+      <h3 class="booking-title">Booking 3 (Optional)</h3>
       <div class="form-group">
         <input
           type="checkbox"
           id="enableBooking3"
           onchange="toggleBookingSection(3)"
         />
-        <label for="enableBooking3" style="display: inline">Add Room 3</label>
+        <label for="enableBooking3" style="display: inline">Add Booking 3</label>
       </div>
 
       <div id="booking3Fields" style="display: none">
@@ -168,15 +170,15 @@
         </div>
 
         <div class="form-group">
-          <label>Room arrangement:</label>
+          <label>Accommodation arrangement:</label>
           <select id="roomType3">
-            <option value="separate">Separate Rooms</option>
-            <option value="shared">Shared Room</option>
+            <option value="separate">Each Pet in Own Room</option>
+            <option value="shared">Pets Sharing One Room</option>
           </select>
         </div>
 
         <div class="form-group">
-          <label>Stay type:</label>
+          <label>Room type:</label>
           <select id="stayType3">
             <option value="56">Bark 'n' Bunk Dormitory ($56)</option>
             <option value="80">Junior Suite ($80)</option>
@@ -260,115 +262,96 @@
           totalBaseCost += booking.baseCost;
         });
 
-        // Get flat array of all pets for discount calculation
-        let allPets = [];
-        let petId = 0;
-
-        bookings.forEach((booking) => {
-          for (let i = 0; i < booking.numPets; i++) {
-            // Calculate stay discount for this specific pet based on its duration
-            let stayDiscountRate = 0;
-            let stayDiscountType = "";
-
-            if (booking.duration >= 30) {
-              stayDiscountRate = 0.2;
-              stayDiscountType = "20% Extended Stay (30+ nights)";
-            } else if (booking.duration >= 7) {
-              stayDiscountRate = 0.1;
-              stayDiscountType = "10% Extended Stay (7+ nights)";
-            }
-
-            allPets.push({
-              id: petId++, // Unique ID for each pet
-              roomNum: booking.num,
-              baseRate: booking.baseRate,
-              duration: booking.duration,
-              roomType: booking.roomType,
-              stayDiscountRate: stayDiscountRate,
-              stayDiscountType: stayDiscountType,
-              isFirstPet: allPets.length === 0, // First pet across all rooms
-              isFirstInRoom: i === 0, // First pet in this specific room
-            });
-          }
-        });
-
-        // Process room-by-room calculations
+        // Process room-by-room calculations with more precise tracking
         const bookingResults = bookings.map((booking) => {
           const result = { ...booking };
 
-          // Find pets in this room
-          const petsInRoom = allPets.filter(
-            (pet) => pet.roomNum === booking.num
-          );
+          // Find which pet in the overall booking order is the first in this booking
+          let firstPetOverallIndex = 0;
+          for (let i = 0; i < bookings.indexOf(booking); i++) {
+            firstPetOverallIndex += bookings[i].numPets;
+          }
 
-          // Count first vs additional pets
-          const firstPetInRoom = petsInRoom.find((pet) => pet.isFirstPet);
+          // First pet in the booking gets no discount
+          const containsFirstPetOverall = firstPetOverallIndex === 0;
 
-          // Get additional pets (those that aren't the first pet in the entire booking)
-          const additionalPetsAcrossRooms = petsInRoom.filter(
-            (pet) => !pet.isFirstPet
-          );
+          // For display and calculation
+          let firstPetCost = 0;
+          let additionalPetsCost = 0;
+          let firstPetDiscount = 0;
+          let additionalPetsDiscount = 0;
+          let discountTypes = new Set();
 
-          // Set up results for display
-          result.hasFirstPet = !!firstPetInRoom;
-          result.additionalPetCount = additionalPetsAcrossRooms.length;
+          // Calculate stay discount if applicable
+          let stayDiscountRate = 0;
+          let stayDiscountType = "";
 
-          // Calculate room costs and discounts
-          result.firstPetCost = 0;
-          result.additionalPetsCost = 0;
-          result.appliedDiscount = 0;
-          result.discountTypes = new Set();
+          if (booking.duration >= 30) {
+            stayDiscountRate = 0.2;
+            stayDiscountType = "20% Extended Stay (30+ nights)";
+          } else if (booking.duration >= 7) {
+            stayDiscountRate = 0.1;
+            stayDiscountType = "10% Extended Stay (7+ nights)";
+          }
 
-          // Process first pet (if in this room)
-          if (firstPetInRoom) {
-            result.firstPetCost =
-              firstPetInRoom.baseRate * firstPetInRoom.duration;
+          // Calculate costs for each pet in this booking individually
+          for (let i = 0; i < booking.numPets; i++) {
+            const petBaseCost = booking.baseRate * booking.duration;
+            const isFirstPetOverall = firstPetOverallIndex + i === 0;
+            const isFirstInThisBooking = i === 0;
 
-            // Apply stay discount to first pet if applicable
-            if (firstPetInRoom.stayDiscountRate > 0) {
-              const discount =
-                result.firstPetCost * firstPetInRoom.stayDiscountRate;
-              result.appliedDiscount += discount;
-              result.discountTypes.add(firstPetInRoom.stayDiscountType);
+            if (isFirstPetOverall) {
+              // First pet overall (no multi-pet discount)
+              firstPetCost += petBaseCost;
+
+              // Check for stay discount only
+              if (stayDiscountRate > 0) {
+                const discount = petBaseCost * stayDiscountRate;
+                firstPetDiscount += discount;
+                discountTypes.add(stayDiscountType);
+              }
+            } else {
+              // Additional pet (may get discount)
+              additionalPetsCost += petBaseCost;
+
+              // Determine multi-pet discount based on accommodation arrangement
+              let multiPetDiscountRate = 0.1; // Default 10% for separate rooms
+              let multiPetDiscountType = "10% Multi-Pet (Each in Own Room)";
+
+              // For pets sharing a room, 2nd+ pets get 20% discount
+              if (booking.roomType === "shared" && !isFirstInThisBooking) {
+                multiPetDiscountRate = 0.2;
+                multiPetDiscountType = "20% Multi-Pet (Sharing One Room)";
+              }
+
+              // Compare discounts and choose the better one
+              const multiPetDiscount = petBaseCost * multiPetDiscountRate;
+              const stayDiscount =
+                stayDiscountRate > 0 ? petBaseCost * stayDiscountRate : 0;
+
+              if (stayDiscount > multiPetDiscount && stayDiscountRate > 0) {
+                additionalPetsDiscount += stayDiscount;
+                discountTypes.add(stayDiscountType);
+              } else {
+                additionalPetsDiscount += multiPetDiscount;
+                discountTypes.add(multiPetDiscountType);
+              }
             }
           }
 
-          // Process additional pets
-          additionalPetsAcrossRooms.forEach((pet) => {
-            const petBaseCost = pet.baseRate * pet.duration;
-            result.additionalPetsCost += petBaseCost;
-
-            // Determine multi-pet discount based on pet's position
-            let roomMultiPetDiscountRate;
-            let roomMultiPetDiscountType;
-
-            // Only apply 20% discount to additional pets in shared rooms
-            if (pet.roomType === "shared" && !pet.isFirstInRoom) {
-              roomMultiPetDiscountRate = 0.2;
-              roomMultiPetDiscountType = "20% Multi-Pet (Shared Room)";
-            } else {
-              roomMultiPetDiscountRate = 0.1;
-              roomMultiPetDiscountType = "10% Multi-Pet (Separate Rooms)";
-            }
-
-            // Compare multi-pet discount vs stay discount
-            const multiPetDiscount = petBaseCost * roomMultiPetDiscountRate;
-            const stayDiscount =
-              pet.stayDiscountRate > 0 ? petBaseCost * pet.stayDiscountRate : 0;
-
-            if (stayDiscount > multiPetDiscount && pet.stayDiscountRate > 0) {
-              result.appliedDiscount += stayDiscount;
-              result.discountTypes.add(pet.stayDiscountType);
-            } else if (roomMultiPetDiscountRate > 0) {
-              result.appliedDiscount += multiPetDiscount;
-              result.discountTypes.add(roomMultiPetDiscountType);
-            }
-          });
+          // Set up results for display
+          result.hasFirstPet = containsFirstPetOverall;
+          result.additionalPetCount = containsFirstPetOverall
+            ? booking.numPets - 1
+            : booking.numPets;
+          result.firstPetCost = firstPetCost;
+          result.additionalPetsCost = additionalPetsCost;
+          result.appliedDiscount = firstPetDiscount + additionalPetsDiscount;
 
           // Format discount type for display
-          if (result.discountTypes.size === 1) {
-            result.discountType = Array.from(result.discountTypes)[0];
-          } else if (result.discountTypes.size > 1) {
+          if (discountTypes.size === 1) {
+            result.discountType = Array.from(discountTypes)[0];
+          } else if (discountTypes.size > 1) {
             result.discountType = "Multiple Discounts Applied";
           } else {
             result.discountType = "";
@@ -399,11 +382,11 @@
         bookingResults.forEach((booking) => {
           resultHTML += `
         <div class="booking-result">
-          <h4>Room ${booking.num}</h4>
+          <h4>Booking ${booking.num}</h4>
           <p>${booking.numPets} pet${booking.numPets > 1 ? "s" : ""} for ${
             booking.duration
           } day${booking.duration > 1 ? "s" : ""} (${
-            booking.roomType === "shared" ? "Shared Room" : "Separate Rooms"
+            booking.roomType === "shared" ? "Pets Sharing One Room" : "Each Pet in Own Room"
           })</p>
           
           ${
@@ -430,7 +413,7 @@
               : ""
           }
           
-          <p>Room Subtotal: $${booking.afterDiscount.toFixed(2)}</p>
+          <p>Booking Subtotal: $${booking.afterDiscount.toFixed(2)}</p>
         </div>
       `;
         });
